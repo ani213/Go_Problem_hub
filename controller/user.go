@@ -59,11 +59,13 @@ func Login(c *gin.Context) {
 	err := userCollection.FindOne(ctx, bson.M{"email": username}).Decode(&user)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "username or password is wrong"})
+		return
 	}
 	// defer cusers.Close(c)
-	isCheckedPassword := common.CheckPasswor(password, user.Password.HashedPassword, user.Password.Salt)
+	isCheckedPassword := common.CheckPassword(password, user.Password.HashedPassword, user.Password.Salt)
 	if !isCheckedPassword {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "username or password is wrong"})
+		return
 	}
 	tokenData := map[string]interface{}{
 		"id":       user.ID.Hex(),
@@ -75,10 +77,12 @@ func Login(c *gin.Context) {
 	accessToken, err := common.GenerateAccessToken(tokenData)
 	if err != nil {
 		model.SendError(c, model.SomethingWentWrong(err))
+		return
 	}
 	refreshToken, err := common.GenerateRefreshToken(tokenData)
 	if err != nil {
 		model.SendError(c, model.SomethingWentWrong(err))
+		return
 	}
 	c.JSON(http.StatusOK, gin.H{"expire_refresh": 1800, "expire_access": 2400, "access_token": accessToken, "refresh_token": refreshToken})
 }
