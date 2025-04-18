@@ -27,3 +27,11 @@ type Password struct {
 	HashedPassword   string `bson:"hashedPassword" json:"hashedPassword"`
 	VerificationCode int    `bson:"varificationCode" json:"varificationCode"`
 }
+
+type RegisterBody struct {
+	Username  string `json:"username" validate:"required,min=3,max=20"`
+	FirstName string `json:"firstName"`
+	LastName  string `json:"lastName"`
+	Email     string `json:"email" validate:"required,email"`
+	Password  string `json:"password" validate:"required,min=6"`
+}

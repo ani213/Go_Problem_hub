@@ -9,7 +9,7 @@ import (
 func Routes(router *gin.Engine) {
 	public := router.Group("/")
 	public.POST("/login", controller.Login)
-	public.GET("/register", controller.Register)
+	public.POST("/register", controller.Register)
 
 	/***********************/
 	protected := router.Group("/v1")

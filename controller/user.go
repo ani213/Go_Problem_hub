@@ -11,6 +11,8 @@ import (
 	"github.com/ani213/Problemhub_backend/model"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type User struct {
@@ -20,9 +22,57 @@ type User struct {
 }
 
 func Register(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Get request",
-	})
+	var body model.RegisterBody
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	err := c.ShouldBindBodyWithJSON(&body)
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	var user model.User
+	var userCollection = config.GetCollection("users")
+
+	err = userCollection.FindOne(ctx, bson.M{"$or": []bson.M{
+		{"email": body.Email},
+		{"username": body.Username},
+	}}).Decode(&user)
+
+	if err == mongo.ErrNoDocuments {
+		salt, err := common.GenerateSalt()
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		hashPassword := common.EncryptPassword(body.Password, salt)
+		password := model.Password{
+			Salt:             salt,
+			HashedPassword:   hashPassword,
+			VerificationCode: 000000,
+		}
+		newUser := model.User{
+			ID:        primitive.NewObjectID(),
+			Username:  body.Username,
+			FirstName: body.FirstName,
+			LastName:  body.LastName,
+			Password:  password,
+			Role:      "user",
+		}
+		user, err := userCollection.InsertOne(ctx, newUser)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{
+			"user": user,
+		})
+	} else {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "username or email exiest"})
+		return
+	}
+
 }
 
 func Users(c *gin.Context) {

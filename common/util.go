@@ -1,6 +1,7 @@
 package common
 
 import (
+	"crypto/rand"
 	"crypto/sha512"
 	"encoding/hex"
 	"os"
@@ -18,7 +19,7 @@ func EncryptPassword(password, salt string) string {
 	return hex.EncodeToString(derivedKey) // Convert to hex string
 }
 
-func CheckPasswor(password string, hashpassword string, salt string) bool {
+func CheckPassword(password string, hashpassword string, salt string) bool {
 	return EncryptPassword(password, salt) == hashpassword
 
 }
@@ -44,4 +45,13 @@ func generateToken(data map[string]interface{}, secretKey string, expiration tim
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString([]byte(secretKey))
+}
+
+func GenerateSalt() (string, error) {
+	bytes := make([]byte, 32)  // Create a 32-byte slice
+	_, err := rand.Read(bytes) // Fill with cryptographic random bytes
+	if err != nil {
+		return "", err // Handle error if random generation fails
+	}
+	return hex.EncodeToString(bytes), nil // Convert to hex string
 }
