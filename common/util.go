@@ -4,9 +4,11 @@ import (
 	"crypto/rand"
 	"crypto/sha512"
 	"encoding/hex"
+	"fmt"
 	"os"
 	"time"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/pbkdf2"
 )
@@ -54,4 +56,41 @@ func GenerateSalt() (string, error) {
 		return "", err // Handle error if random generation fails
 	}
 	return hex.EncodeToString(bytes), nil // Convert to hex string
+}
+
+func GetErrorMsg(fe validator.FieldError) string {
+	switch fe.Tag() {
+	case "required":
+		return "This field is required"
+	case "email":
+		return "Invalid email address"
+	case "min":
+		return "Value is too short"
+	case "max":
+		return "Value is too long"
+	default:
+		return "Invalid value"
+	}
+}
+
+func VerifyToken(tokenString string, secret string) (jwt.MapClaims, error) {
+	// Parse the token with a secret and check signing method
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		// Ensure it's an HMAC token
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return []byte(secret), nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	// Validate and extract claims
+	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+		return claims, nil
+	}
+
+	return nil, fmt.Errorf("invalid token or claims")
 }

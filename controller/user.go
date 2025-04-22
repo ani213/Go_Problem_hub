@@ -10,6 +10,7 @@ import (
 	"github.com/ani213/Problemhub_backend/config"
 	"github.com/ani213/Problemhub_backend/model"
 	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -21,6 +22,8 @@ type User struct {
 	Email string
 }
 
+var validate = validator.New()
+
 func Register(c *gin.Context) {
 	var body model.RegisterBody
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -29,6 +32,20 @@ func Register(c *gin.Context) {
 
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	// Validate struct fields
+	if err := validate.Struct(body); err != nil {
+		validationErrors := err.(validator.ValidationErrors)
+		errors := make(map[string]string)
+
+		for _, fieldErr := range validationErrors {
+			errors[fieldErr.Field()] = common.GetErrorMsg(fieldErr)
+		}
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "Validation failed",
+			"errors":  errors,
+		})
 		return
 	}
 
@@ -59,6 +76,10 @@ func Register(c *gin.Context) {
 			LastName:  body.LastName,
 			Password:  password,
 			Role:      "user",
+			Email:     body.Email,
+			Status:    "inactive",
+			CreatedAt: time.Now().UTC(),
+			UpdatedAt: time.Now().UTC(),
 		}
 		user, err := userCollection.InsertOne(ctx, newUser)
 		if err != nil {

@@ -26,5 +26,13 @@ func GetAllProblems(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, problems)
+}
+
+func AddProblem(c *gin.Context) {
+
+	// var body model.Problem
+	// // var problemCollection = config.GetCollection("problems")
+	// ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	// defer cancel()
 
 }
