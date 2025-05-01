@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"fmt"
 	"net/http"
 	"os"
 	"strings"
@@ -30,7 +29,6 @@ func Authentication() gin.HandlerFunc {
 		}
 
 		ctx.Set("user", claims)
-		fmt.Println(mainToken[1])
 		ctx.Next()
 	}
 }

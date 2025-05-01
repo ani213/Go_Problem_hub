@@ -5,9 +5,13 @@ import (
 	"crypto/sha512"
 	"encoding/hex"
 	"fmt"
+	"net/http"
 	"os"
+	"reflect"
+	"strings"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/pbkdf2"
@@ -93,4 +97,51 @@ func VerifyToken(tokenString string, secret string) (jwt.MapClaims, error) {
 	}
 
 	return nil, fmt.Errorf("invalid token or claims")
+}
+
+func getJSONFieldName(fe validator.FieldError, obj interface{}) string {
+	// Use reflect to get the struct type
+	t := reflect.TypeOf(obj)
+	if t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+	if t.Kind() != reflect.Struct {
+		return fe.Field() // fallback
+	}
+
+	field, ok := t.FieldByName(fe.StructField())
+	if !ok {
+		return fe.Field()
+	}
+
+	// Extract JSON tag (e.g. json:"title,omitempty")
+	jsonTag := field.Tag.Get("json")
+	if jsonTag == "" {
+		return fe.Field()
+	}
+
+	// Only take the first part before a comma (e.g. "title" from "title,omitempty")
+	return strings.Split(jsonTag, ",")[0]
+}
+
+var validate = validator.New()
+
+func ValidateSchema(c *gin.Context, body interface{}) bool {
+	err := validate.Struct(body)
+	if err != nil {
+		validationErrors := err.(validator.ValidationErrors)
+		errors := make(map[string]string)
+
+		for _, fieldErr := range validationErrors {
+			fieldName := getJSONFieldName(fieldErr, body)
+			errors[fieldName] = GetErrorMsg(fieldErr) // Or just fieldErr.Error()
+		}
+
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "Validation failed",
+			"errors":  errors,
+		})
+		return false
+	}
+	return true
 }
