@@ -16,4 +16,5 @@ func Routes(router *gin.Engine) {
 	protected.Use(middleware.Authentication())
 	protected.GET("/user", controller.Users)
 	protected.GET("/problems", controller.GetAllProblems)
+	protected.POST("/add-problem-type", controller.AddProblemType)
 }
